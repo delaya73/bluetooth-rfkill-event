@@ -174,6 +174,12 @@ struct main_opts {
     gboolean    no_flush;
     /* Enable lpm with hciattach */
     gboolean    use_lpm;
+    /* Enable timeout */
+    gboolean    set_hci_timeout;
+    char*	hci_timeout;
+    /* Enable additional flags */
+    gboolean    set_additional_flags;
+    char*	additional_flags;
 };
 
 struct main_opts main_opts;
@@ -194,7 +200,9 @@ static const char * const supported_options[] = {
     "exec_timeout",
     "bdaddr",
     "no_flush",
-    "use_lpm"
+    "use_lpm",
+    "hci_timeout",
+    "additional_flags"
 };
 
 static int log_debug = 0;
@@ -543,6 +551,10 @@ void init_config()
     main_opts.exec_timeout = 0;
     main_opts.no_flush = FALSE;
     main_opts.use_lpm = FALSE;
+    main_opts.set_hci_timeout = FALSE;
+    main_opts.hci_timeout = NULL;
+    main_opts.set_additional_flags = FALSE;
+    main_opts.additional_flags = NULL;
 }
 
 GKeyFile *load_config(const char *file)
@@ -742,6 +754,24 @@ void parse_config(GKeyFile *config)
     } else {
         main_opts.use_lpm = boolean;
     }
+
+    str = g_key_file_get_string(config, "General", "hci_timeout", &err);
+    if (err) {
+        g_clear_error(&err);
+    } else {
+        main_opts.set_hci_timeout = TRUE;
+        g_free(main_opts.hci_timeout);
+        main_opts.hci_timeout = str;
+    }
+
+    str = g_key_file_get_string(config, "General", "additional_flags", &err);
+    if (err) {
+        g_clear_error(&err);
+    } else {
+        main_opts.set_additional_flags = TRUE;
+        g_free(main_opts.additional_flags);
+        main_opts.additional_flags = str;
+    }
 }
 
 gboolean check_bd_format(const char* bd_add)
@@ -868,7 +898,9 @@ static void hciattach_cmdline()
     cur += snprintf(cur, end-cur, " %s", main_opts.uart_dev);
     cur += snprintf(cur, end-cur, " %s", main_opts.type_id ? main_opts.type_id : HCIATTACH_TYPE_ID_DEFAULT);
     cur += snprintf(cur, end-cur, " %d", main_opts.baud_rate);
+    if (main_opts.set_hci_timeout) cur += snprintf(cur, end-cur," -t %s", main_opts.hci_timeout);
     cur += snprintf(cur, end-cur, " %s", main_opts.flow ? "flow" : "noflow");
+    if (main_opts.set_additional_flags) cur += snprintf(cur, end-cur, " %s", main_opts.additional_flags);
     if (main_opts.set_tosleep)
         cur += snprintf(cur, end-cur, " %s", tosleep_value());
     cur += snprintf(cur, end-cur," %s", main_opts.bd_add);
